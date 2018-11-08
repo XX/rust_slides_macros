@@ -32,15 +32,125 @@
                         Могучие, удобные и в меру безопасные средства метапрограммирования в [Rust](https://rust-lang.org).
                     </textarea>
                 </section>
+                
                 <section data-markdown>
                     <textarea data-template>
-                        ### Зачем нужны макросы?
-
-                        - Расширение синтаксиса
-                        - Мягкое внедрение и обкатка новых возможностей
-                        - Создание пользовательских DSL
-                        - Зависимая кодогенерация
-                        - Оптимизация исполнения кода
+                        ## Зачем нужны макросы?
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### 1. Расширение синтаксиса
+                        
+                        ```rust
+                        let nums = {
+                            let mut tmp = Vec::new();
+                            tmp.push(1);
+                            tmp.push(2);
+                            tmp.push(3);
+                            tmp
+                        };
+                        ```
+                        
+                        ```rust
+                        let nums = vec![1, 2, 3];
+                        let v = vec![42; 3];
+                        ```
+                        
+                        Note:
+                        vec! использует интаксическое сокращение для любого количества параметров.
+                        
+                        Макросы позволяют абстрагироваться на синтаксическом уровне. Вызов макроса является сокращением для «расширенной» синтаксической формы. Это расширение происходит в начале компиляции, до начала статической проверки.
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### 2. Обкатка улучшений языка
+                        
+                        `try!`
+                        
+                        ```rust
+                        let mut file = try!(File::create("file.txt"));
+                        ```
+                        
+                        `?`
+                        
+                        ```rust
+                        let mut file = File::create("file.txt")?;
+                        ```
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### 3. Использование DSL
+                        
+                        SQL
+                        
+                        ```rust
+                        let sql = sql!(SELECT * FROM posts WHERE id=1);
+                        ```
+                        
+                        JSON
+                        
+                        ```rust
+                        let value = json!({
+                            "code": 200,
+                            "success": true,
+                            "payload": {
+                                "features": [
+                                    "serde",
+                                    "json"
+                                ]
+                            }
+                        });
+                        ```
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### 4. Зависимая кодогенерация
+                        
+                        Автореализация `Debug`
+                        
+                        ```rust
+                        #[derive(Debug)]
+                        struct Point {
+                            x: i32,
+                            y: i32,
+                        }
+                        ```
+                        
+                        Сгенерирует
+                        
+                        ```rust
+                        impl Debug for Point {
+                            fn fmt(&self, f: &mut Formatter) -> Result {
+                                write!(f, "Point {{ x: {}, y: {} }}", self.x, self.y)
+                            }
+                        }
+                        ```
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### 5. Оптимизация исполнения читаемого кода
+                        
+                        Использование `vec!`
+                        
+                        ```rust
+                        let nums = vec![1, 2, 3];
+                        ```
+                        
+                        Сгенерирует
+                        
+                        ```rust
+                        let nums = <[_]>::into_vec(Box::new([1, 2, 3]));
+                        ```
                     </textarea>
                 </section>
                 
@@ -48,8 +158,20 @@
                     <textarea data-template>
                         ### Какие бывают макросы?
 
-                        - [Декларативные](https://doc.rust-lang.org/book/2018-edition/appendix-04-macros.html) (обычные)
+                        - [Декларативные](https://doc.rust-lang.org/book/2018-edition/appendix-04-macros.html) (обычные, образцовые)
+                        ```rust
+                        foo!(..) // {}, []
+                        ```
                         - [Процедурные](https://doc.rust-lang.org/reference/procedural-macros.html)
+                        ```rust
+                        foo!(..) // {}, []
+                        ```
+                        ```rust
+                        #[derive(Foo)]
+                        ```
+                        ```rust
+                        #[foo]
+                        ```
                     </textarea>
                 </section>
                 
@@ -63,12 +185,7 @@
                     <script type="text/template">
                         ### Макрос `vec`
 
-                        ```rust
-                        let nums = vec![1, 2, 3];
-                        ```
-                        
                         Определение:
-                        <!-- .element: class="fragment" data-fragment-index="1" -->
                         ```rust
                         macro_rules! vec {
                             ($elem:expr; $n:expr) => (
@@ -80,14 +197,90 @@
                             ($($x:expr,)*) => (vec![$($x),*])
                         }
                         ```
-                        <!-- .element: class="fragment" data-fragment-index="1" -->
                         
-                        Результат:
+                        Note:
+                        Макрос определяется с помощью ряда правил, которые представляют собой варианты сопоставления с образцом.
+                        Сопоставление происходит на уровне синтаксических деревьев Rust, на этапе компиляции.
+                        
+                        Образец $x:expr будет соответствовать любому выражению Rust, связывая его дерево синтаксиса с метапеременной $x. Идентификатор expr является спецификатором фрагмента.
+                        
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Обнаружитель совпадений (matcher)
+                        
+                        `$`*name*`:`*designator*
+                        <small>
+                        - **`item`** - [элемент](https://doc.rust-lang.org/stable/reference/items.html)
+                        - **`block`** - [блок](https://doc.rust-lang.org/stable/reference/expressions/block-expr.html)
+                        - **`stmt`** - [инструкция](https://doc.rust-lang.org/stable/reference/statements.html)
+                        - **`pat`** - [образец](https://doc.rust-lang.org/stable/reference/expressions/match-expr.html)
+                        - **`expr`** - [выражение](https://doc.rust-lang.org/stable/reference/expressions.html)
+                        - **`ty`** - [тип](https://doc.rust-lang.org/stable/reference/types.html)
+                        - **`ident`** - [идентификатор](https://doc.rust-lang.org/stable/reference/identifiers.html) или [ключевое слово](https://doc.rust-lang.org/stable/reference/keywords.html)
+                        - **`path`** - [путь](https://doc.rust-lang.org/stable/reference/paths.html)
+                        - **`tt`** - [дерево токенов](https://doc.rust-lang.org/stable/reference/tokens.html)
+                        - **`meta`** - содержимое [атрибута](https://doc.rust-lang.org/stable/reference/attributes.html)
+                        - **`lifetime`** - [время жизни](https://doc.rust-lang.org/stable/reference/tokens.html#lifetimes-and-loop-labels)
+                        - **`vis`** - [спецификатор видимости](https://doc.rust-lang.org/stable/reference/visibility-and-privacy.html)
+                        
+                        </small>
+                        
+                        Note:
+                        $name - метапеременная
+                        :designator - спецификатор фрагмента
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### В Rust макросы гигиеничны
+                        
+                        Проблемы макросов C
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        ```C
+                        #define MUL(x) (x * 5)
+
+                        MUL(2 + 8); // (2 + 8 * 5) -> 42 ??
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        Отсутствуют в Rust
                         <!-- .element: class="fragment" data-fragment-index="2" -->
-                        ```rust
-                        let nums = <[_]>::into_vec(box [1, 2, 3]);
+                        ```Rust
+                        macro_rules! mul {
+                            ($x:expr) => { $x * 5 };
+                        }
+                        
+                        mul!(2 + 8); // { (2 + 8) * 5 } -> 50 !!
                         ```
                         <!-- .element: class="fragment" data-fragment-index="2" -->
+                        
+                        Note:
+                        Некоторые языки реализуют макросы с помощью простой текстовой замены, что приводит к проблемам.
+                        
+                        Метапеременная $x обрабатывается как единый узел с выражением, и сохраняет свое место в синтаксическом дереве даже после замены.
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Нет захвата переменных
+                        
+                        <sub>Макрос раскрывается в отдельном контексте синтаксиса</sub>
+                        ```Rust
+                        macro_rules! foo {
+                            ($v:ident) => (let $v = 3);
+                        }
+
+                        fn main() {
+                            foo!(x);
+                            println!("{}", x);
+                        }
+                        ```
+                        <sub>Только для связываний `let` и меток `loop`, но не для [элементов](https://doc.rust-lang.org/stable/reference/items.html)</sub>
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
                     </script>
                 </section>
                 
@@ -105,6 +298,12 @@
                         println!("Arg a is {}, b is {}", a, b);
                         ```
                         <!-- .element: class="fragment" data-fragment-index="1" -->
+                        Другие популярные макросы:  <!-- .element: class="fragment" data-fragment-index="2" -->
+                        ```
+                        format!(..), try!(..), vec!(..), assert!(..), assert_eq!(..),
+                        panic!(..), unreachable!(), unimplemented!()
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
                     </script>
                 </section>
                 
@@ -144,96 +343,6 @@
                         ```
                         
                         <small>`{} - Display`<br/>`{:?} - Debug`</small> <!-- .element: class="fragment" data-fragment-index="1" -->
-                    </script>
-                </section>
-                
-                <section data-markdown>
-                    <script type="text/template">
-                        ### Реализация `Display`
-
-                        ```rust
-                        use std::fmt::{Display, Formatter, Result};
-
-                        struct Point {
-                            x: i32,
-                            y: i32,
-                        }
-
-                        impl Display for Point {
-                            fn fmt(&self, formatter: &mut Formatter) -> Result {
-                                write!(formatter, "({}, {})", self.x, self.y)
-                            }
-                        }
-                        ```
-                        
-                        ```rust
-                        let origin = Point { x: 0, y: 0 };
-                        println!("The origin is: {}", origin);
-                        ```
-                        <!-- .element: class="fragment" data-fragment-index="1" -->
-                        
-                        `"The origin is: (0, 0)"` <!-- .element: class="fragment" data-fragment-index="2" -->
-                    </script>
-                </section>
-                
-                <section data-markdown>
-                    <script type="text/template">
-                        ### Автоматическая реализация `Debug`
-
-                        ```rust
-                        #[derive(Debug)]
-                        struct Point {
-                            x: i32,
-                            y: i32,
-                        }
-                        ```
-                        
-                        ```rust
-                        let origin = Point { x: 0, y: 0 };
-                        println!("The origin is: {:?}", origin);
-                        ```
-                        <!-- .element: class="fragment" data-fragment-index="1" -->
-                        
-                        `"The origin is: Point { x: 0, y: 0 }"` <!-- .element: class="fragment" data-fragment-index="2" -->
-                    </script>
-                </section>
-                
-                <section data-markdown>
-                    <script type="text/template">
-                        ### Проблемы макросов C
-
-                        ```C
-                        #define SUM(x, y) (x + y)
-                        #define MUL(x) (x * 5)
-                        ```
-                        
-                        ```C
-                        SUM(1, 2);  // (1 + 2) -> 3
-                        MUL(2 + 8); // (2 + 8 * 5) -> 42 ??
-                        ```
-                        <!-- .element: class="fragment" data-fragment-index="1" -->
-                    </script>
-                </section>
-                
-                <section data-markdown>
-                    <script type="text/template">
-                        ### Решены в Rust
-
-                        ```Rust
-                        macro_rules! sum {
-                            ($x:expr, $y:expr) => { $x + $y };
-                        }
-
-                        macro_rules! mul {
-                            ($x:expr) => { $x * 5 };
-                        }
-                        ```
-                        
-                        ```Rust
-                        sum!(1, 2);  // { 1 + 2 } -> 3
-                        mul!(2 + 8); // { (2 + 8) * 5 } -> 50 !!
-                        ```
-                        <!-- .element: class="fragment" data-fragment-index="1" -->
                     </script>
                 </section>
                 
