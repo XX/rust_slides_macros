@@ -1,0 +1,678 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Макросы в Rust</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+                <section data-markdown>
+                    <textarea data-template>
+                        # Rust
+                        # Макросы
+
+                        Могучие, удобные и в меру безопасные средства метапрограммирования в [Rust](https://rust-lang.org).
+                    </textarea>
+                </section>
+				<section data-markdown>
+                    <textarea data-template>
+                        ### Зачем нужны макросы?
+
+                        - Расширение синтаксиса
+                        - Мягкое внедрение и обкатка новых возможностей
+                        - Создание пользовательских DSL
+                        - Зависимая кодогенерация
+                        - Оптимизация исполнения кода
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### Какие бывают макросы?
+
+                        - [Декларативные](https://doc.rust-lang.org/book/2018-edition/appendix-04-macros.html) (обычные)
+                        - [Процедурные](https://doc.rust-lang.org/reference/procedural-macros.html)
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ## Декларативные макросы
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Макрос `vec`
+
+                        ```rust
+                        let nums = vec![1, 2, 3];
+                        ```
+                        
+                        Определение:
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        ```rust
+                        macro_rules! vec {
+                            ($elem:expr; $n:expr) => (
+                                $crate::vec::from_elem($elem, $n)
+                            );
+                            ($($x:expr),*) => (
+                                <[_]>::into_vec(box [$($x),*])
+                            );
+                            ($($x:expr,)*) => (vec![$($x),*])
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        
+                        Результат:
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
+                        ```rust
+                        let nums = <[_]>::into_vec(box [1, 2, 3]);
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Привет, макрос!
+
+                        ```rust
+                        fn main() {
+                            println!("Hello World!");
+                        }
+                        ```
+                        Макрос форматированного вывода: <!-- .element: class="fragment" data-fragment-index="1" -->
+                        ```rust
+                        println!("Arg a is {}, b is {}", a, b);
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### Получение форматированной строки
+
+                        <small>`println!` -> `print!` -> `format_args!`</small>
+
+                        <small>`format!` -> `format_args!`</small>
+                        
+                        ```rust
+                        fn main() {
+                            let s = format!("Hello {}!", "World");
+                            println!("{}", s);
+                        }
+                        ```
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Получение форматированной строки
+
+                        ```rust
+                        format!("Hello");                 // "Hello"
+                        format!("Hello, {}!", "world");   // "Hello, world!"
+                        format!("The number is {}", 1);   // "The number is 1"
+                        format!("{:?}", (3, 4));          // "(3, 4)"
+                        format!("{value}", value = 4);    // "4"
+                        format!("{} {}", 1, 2);           // "1 2"
+                        format!("{:04}", 42);             // "0042"
+
+                        format!("{argument}", argument = "test");   // "test"
+                        format!("{name} {}", 1, name = 2);          // "2 1"
+                        format!("{a} {c} {b}", a="a", b='b', c=3);  // "a 3 b"
+                        ```
+                        
+                        <small>`{} - Display`<br/>`{:?} - Debug`</small> <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Реализация `Display`
+
+                        ```rust
+                        use std::fmt::{Display, Formatter, Result};
+
+                        struct Point {
+                            x: i32,
+                            y: i32,
+                        }
+
+                        impl Display for Point {
+                            fn fmt(&self, formatter: &mut Formatter) -> Result {
+                                write!(formatter, "({}, {})", self.x, self.y)
+                            }
+                        }
+                        ```
+                        
+                        ```rust
+                        let origin = Point { x: 0, y: 0 };
+                        println!("The origin is: {}", origin);
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        
+                        `"The origin is: (0, 0)"` <!-- .element: class="fragment" data-fragment-index="2" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Автоматическая реализация `Debug`
+
+                        ```rust
+                        #[derive(Debug)]
+                        struct Point {
+                            x: i32,
+                            y: i32,
+                        }
+                        ```
+                        
+                        ```rust
+                        let origin = Point { x: 0, y: 0 };
+                        println!("The origin is: {:?}", origin);
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        
+                        `"The origin is: Point { x: 0, y: 0 }"` <!-- .element: class="fragment" data-fragment-index="2" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Проблемы макросов C
+
+                        ```C
+                        #define SUM(x, y) (x + y)
+                        #define MUL(x) (x * 5)
+                        ```
+                        
+                        ```C
+                        SUM(1, 2);  // (1 + 2) -> 3
+                        MUL(2 + 8); // (2 + 8 * 5) -> 42 ??
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Решены в Rust
+
+                        ```Rust
+                        macro_rules! sum {
+                            ($x:expr, $y:expr) => { $x + $y };
+                        }
+
+                        macro_rules! mul {
+                            ($x:expr) => { $x * 5 };
+                        }
+                        ```
+                        
+                        ```Rust
+                        sum!(1, 2);  // { 1 + 2 } -> 3
+                        mul!(2 + 8); // { (2 + 8) * 5 } -> 50 !!
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ## Эволюция макроса `try`
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### Без `try` в Rust шумно
+
+                        ```rust
+                        fn write_text() -> Result<(), MyError> {
+                            let mut file = match File::create("file.txt") {
+                                Ok(f) => f,
+                                Err(e) => return Err(From::from(e)),
+                            };
+                            
+                            match file.write_all(b"Some text.") {
+                                Ok(v) => v,
+                                Err(e) => return Err(From::from(e)),
+                            }
+                            Ok(())
+                        }
+                        ```
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### С макросом `try`
+
+                        ```rust
+                        fn write_text() -> Result<(), MyError> {
+                            let mut file = try!(File::create("file.txt"));
+                            try!(file.write_all(b"Some text."));
+                            Ok(())
+                        }
+                        ```
+                        
+                        ### С оператором `?`
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        
+                        ```rust
+                        fn write_text() -> Result<(), MyError> {
+                            let mut file = File::create("file.txt")?;
+                            file.write_all(b"Some text.")?;
+                            Ok(())
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        
+                        ```Rust
+                        fn write_text() -> Result<(), MyError> {
+                            File::create("file.txt")?.write_all(b"Some text.")?;
+                            Ok(())
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### Определение `try` в `std`
+
+                        ```rust
+                        macro_rules! try {
+                            ($expr:expr) => (match $expr {
+                                $crate::result::Result::Ok(val) => val,
+                                $crate::result::Result::Err(err) => {
+                                    return $crate::result::Result::Err(
+                                        $crate::convert::From::from(err)
+                                    )
+                                }
+                            });
+                            ($expr:expr,) => (try!($expr));
+                        }
+                        ```
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Макросы утверждений
+                        
+                        ```rust
+                        macro_rules! assert {
+                            ($cond:expr) => ({ /* compiler built-in */ });
+                            ($cond:expr,) => ({ /* compiler built-in */ });
+                            ($cond:expr, $($arg:tt)+) => ({ /* compiler built-in */ });
+                        }
+                        ```
+
+                        ```rust
+                        #[test]
+                        fn it_works() {
+                            let x = true;
+                            assert!(x);
+                            assert!(x, "x wasn't true!");
+                            assert_eq!(2 + 2, 4);
+                        }
+                        
+                        #[test]
+                        fn it_not_works() {
+                            let vec = vec![1];
+                            assert!(vec.is_empty());
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section>
+                    <h3>Макросы утверждений</h3>
+                        <pre><code class="hljs" data-trim contenteditable>
+                        running 2 tests
+                        test it_works ... ok
+                        test it_not_works ... FAILED
+
+                        failures:
+
+                        ---- it_not_works stdout ----
+                        thread 'it_not_works' panicked at 'assertion failed:
+                          vec.is_empty()', src/lib.rs:13:5
+                        note: Run with `RUST_BACKTRACE=1` for a backtrace.
+
+
+                        failures:
+                            it_not_works
+
+                        test result: FAILED. 1 passed; 1 failed;
+                          0 ignored; 0 measured; 0 filtered out
+                        </code></pre>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ## DSL на макросах
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Макрос `serde_json::json`
+
+                        ```rust
+                        let value = json!({
+                            "code": 200,
+                            "success": true,
+                            "payload": {
+                                "features": [
+                                    "serde",
+                                    "json"
+                                ]
+                            }
+                        });
+                        ```
+                        <small>Конструирует значение типа **`serde_json::Value`** из JSON-литерала.</small>
+                        
+                        [Определение макроса **`json`**](https://docs.serde.rs/src/serde_json/macros.rs.html#70-75)
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        
+                        ```rust
+                        macro_rules! json {
+                            ($($json:tt)+) => { ... };
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### JSX-подобные шаблоны в **`yew`**
+
+                        ```html
+                        html! {
+                            <section class="todoapp",>
+                                <header class="header",>
+                                    <h1>{ "todos" }</h1>
+                                    { view_input(&model) }
+                                </header>
+                                <section class="main",>
+                                    <input class="toggle-all", type="checkbox",
+                                        checked=model.is_all_completed(),
+                                        onclick=|_| Msg::ToggleAll, />
+                                    { view_entries(&model) }
+                                </section>
+                            </section>
+                        }
+                        ```
+                        <small>Конструирует значение типа **`yew::Html<Model>`**.</small>
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### Макрос **`assemble6502`**
+
+                        ```rust
+                        let machine_code = assemble6502! {
+                        init:
+                            // Init regs and stack
+                            lda #0
+                            ldx #0xff
+                            txs
+                            ldx #0
+                            ldy #0
+                            // Do some demo-math
+                            adc #0          // Immediate
+                            adc 0x12, x     // Zero Page indexed with X
+                            adc 0x34        // Zero Page
+                            adc abs 0x1234  // Absolute (0x1234)
+                            adc abs 0x3040, y   // Abs. indexed with Y
+                            adc (0x10, x)   // (Indirect, X)
+                            adc (0x01),y    // (Indirect),Y
+                            
+                            lda #0
+                        addloop:
+                            adc #1
+                            bne addloop
+                        main:
+                            jmp main
+                        };
+                        ```
+                        <small>Создает массив байтов с машинными кодами.</small>
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### Проблемы декларативных макросов
+                        
+                        - Они декларативны
+                        - Имеют не-Rust синтаксис, трудночитаемый
+                        - Невозможны сложные преобразования
+                        - Ограничен стек рекурсии
+                        - Тело всегда помещается внутрь скобок
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ## Процедурные макросы
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### Виды процедурных макросов
+
+                        - Функциональные макросы
+                        ```rust
+                        custom!(...)
+                        ```
+                        - `Derive`-макросы
+                        ```rust
+                        #[derive(CustomMode)]
+                        ```
+                        - Атрибутные макросы
+                        ```rust
+                        #[custom_attribute]
+                        ```
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Функциональные макросы
+
+                        Как декларативные, только круче:
+                        ```rust
+                        let sql = sql!(SELECT * FROM posts WHERE id=1);
+                        ```
+                        <small>Но не гигиеничны!</small>
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        
+                        Определение:
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
+                        ```rust
+                        #[proc_macro]
+                        pub fn sql(input: TokenStream) -> TokenStream {
+                            ...
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### `Derive`-макросы
+
+                        ```rust
+                        #[derive(Serialize, Deserialize, Debug, PartialEq)]
+                        struct Pet {
+                            name: String,
+                            
+                            #[serde(rename = "a")]
+                            age: i32,
+                        }
+                        ```
+                        
+                        Определение:
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        ```rust
+                        #[proc_macro_derive(Serialize, attributes(serde))]
+                        pub fn derive_serialize(input: TokenStream) -> TokenStream {
+                            ...
+                        }
+                        
+                        #[proc_macro_derive(Deserialize, attributes(serde))]
+                        pub fn derive_deserialize(input: TokenStream) -> TokenStream {
+                            ...
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### `Derive`-макросы
+
+                        ```rust
+                        #[derive(Parser)]
+                        #[grammar = "ident.pest"]
+                        struct IdentParser;
+                        ```
+                        
+                        ```
+                        alpha = { 'a'..'z' | 'A'..'Z' }
+                        digit = { '0'..'9' }
+                        ident = { (alpha | digit)+ }
+                        ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        
+                        Определение:
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
+                        ```rust
+                        #[proc_macro_derive(Parser, attributes(grammar))]
+                        pub fn derive_parser(input: TokenStream) -> TokenStream {
+                            ...
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Атрибутные макросы
+
+                        ```rust
+                        #[route(GET, "/")]
+                        fn index(request: Request) -> Response {
+                            ...
+                        }
+                        ```
+                        
+                        Определение:
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        ```rust
+                        #[proc_macro_attribute]
+                        pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
+                            ...
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Зависимая кодогенерация
+                        
+                        ```rust
+                        #[derive(FieldName)]
+                        struct Record {
+                            start: DateTime<Local>,
+                            activity: Duration,
+                            text: String,
+                        }
+                        ```
+                        
+                        ```rust
+                        enum RecordField {
+                            Start,
+                            Activity,
+                            Text,
+                        }
+
+                        impl RecordField {
+                            fn name(&self) -> &'static str {
+                                match *self {
+                                    RecordField::Start => "start",
+                                    RecordField::Activity => "activity",
+                                    RecordField::Text => "text",
+                                }
+                            }
+
+                            fn by_name(name: &str) -> Option<Self> {
+                                ...
+                            }
+                        }
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ## И это все?
+
+                        #### Остальное - в ответах на вопросы :)
+                    </textarea>
+                </section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
