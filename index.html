@@ -497,7 +497,7 @@
                 
                 <section>
                     <h3>Макросы утверждений</h3>
-                        <pre><code class="hljs" data-trim contenteditable>
+                        <pre><code data-trim contenteditable>
                         running 2 tests
                         test it_works ... ok
                         test it_not_works ... FAILED
@@ -617,7 +617,7 @@
                         ### Проблемы декларативных макросов
                         
                         - Они декларативны
-                        - Имеют не-Rust синтаксис, трудночитаемый
+                        - Имеют собственный язык, трудночитаемый
                         - Невозможны сложные преобразования
                         - Ограничен стек рекурсии
                         - Тело всегда помещается внутрь скобок
@@ -653,9 +653,9 @@
                     <script type="text/template">
                         ### Функциональные макросы
 
-                        Как декларативные, только круче:
+                        Как декларативные, только мощнее:
                         ```rust
-                        let sql = sql!(SELECT * FROM posts WHERE id=1);
+                        let year = rn!(MMXVIII);
                         ```
                         <small>Но не гигиеничны!</small>
                         <!-- .element: class="fragment" data-fragment-index="1" -->
@@ -663,12 +663,80 @@
                         Определение:
                         <!-- .element: class="fragment" data-fragment-index="2" -->
                         ```rust
+                        [lib]
+                        proc-macro = true
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="2" -->
+                        ```rust
                         #[proc_macro]
-                        pub fn sql(input: TokenStream) -> TokenStream {
+                        pub fn rn(input: TokenStream) -> TokenStream {
                             ...
                         }
                         ```
                         <!-- .element: class="fragment" data-fragment-index="2" -->
+                    </script>
+                </section>
+                
+                <section>
+                    <h3>Реализация <code><strong>rn</strong></code></h3>
+                        <pre><code class="hlrs" data-trim contenteditable>
+                        extern crate proc_macro;
+                        extern crate syn;
+
+                        use proc_macro::{TokenStream, TokenTree, Literal};
+                        use syn::{Ident};
+
+                        static NUMERALS: &'static [(&'static str, u32)] = &[
+                            ("M", 1000), ("CM", 900), ("D", 500), ("CD", 400),
+                            ("C",  100), ("XC",  90), ("L",  50), ("XL",  40),
+                            ("X",   10), ("IX",   9), ("V",   5), ("IV",   4),
+                            ("I",    1)
+                        ];
+
+                        #[proc_macro]
+                        pub fn rn(input: TokenStream) -> TokenStream {
+                            let rn_string = syn::parse::&lt;Ident>(input)
+                                .unwrap().to_string();
+                            
+                            let mut rn_str = rn_string.as_str();
+                            let mut total = 0;
+                            while !rn_str.is_empty() {
+                                match NUMERALS.iter()
+                                        .find(|&(rn, _)| rn_str.starts_with(rn)) {
+                                    Some((rn, val)) => {
+                                        total += val;
+                                        rn_str = &rn_str[rn.len()..];
+                                    },
+                                    None => panic!("Unknown roman numeral"),
+                                }
+                            }
+                            TokenTree::from(
+                                Literal::u32_suffixed(total)
+                            ).into()
+                        }
+                        </code></pre>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Использование **`rn`**
+
+                        Только в `nightly` :(
+                        ```rust
+                        #![feature(proc_macro_hygiene)]
+                        
+                        extern crate roman_numerals;
+
+                        use roman_numerals::rn;
+
+                        fn main() {
+                            assert_eq!(rn!(MMXVIII), 2018);
+                        }
+                        ```
+                        Но есть
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        [proc-macro-hack](https://github.com/dtolnay/proc-macro-hack) !)
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
                     </script>
                 </section>
                 
@@ -691,11 +759,6 @@
                         ```rust
                         #[proc_macro_derive(Serialize, attributes(serde))]
                         pub fn derive_serialize(input: TokenStream) -> TokenStream {
-                            ...
-                        }
-                        
-                        #[proc_macro_derive(Deserialize, attributes(serde))]
-                        pub fn derive_deserialize(input: TokenStream) -> TokenStream {
                             ...
                         }
                         ```
@@ -735,6 +798,65 @@
                 
                 <section data-markdown>
                     <script type="text/template">
+                        ### Использование [`VariantCount`](https://github.com/XX/variant_count)
+
+                        ```rust
+                        extern crate variant_count;
+
+                        use variant_count::VariantCount;
+
+                        #[derive(VariantCount)]
+                        enum Test {
+                            First(i32),
+                            Second(Option<String>),
+                            Third,
+                        }
+                        
+                        ...
+                        assert_eq!(Test::VARIANT_COUNT, 3);
+                        ```
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Реализация [`VariantCount`](https://github.com/XX/variant_count)
+
+                        ```rust
+                        extern crate proc_macro;
+                        extern crate syn;
+                        extern crate quote;
+
+                        use proc_macro::TokenStream;
+                        use syn::DeriveInput;
+                        use quote::quote;
+
+                        #[proc_macro_derive(VariantCount)]
+                        pub fn variant_count(input: TokenStream) -> TokenStream {
+                            let ast: DeriveInput = syn::parse(input).unwrap();
+                            let (vis, ty, generics) = (&ast.vis, &ast.ident, &ast.generics);
+                            let variants = match &ast.data {
+                                syn::Data::Enum(e) => &e.variants,
+                                _ => panic!("VariantCount can only be derived for enums"),
+                            };
+                            let count = variants.len();
+                            let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+                            let tokens = quote! {
+                                impl #impl_generics #ty #ty_generics
+                                    #where_clause
+                                {
+                                    #vis const VARIANT_COUNT: usize = #count;
+                                }
+                            };
+                            tokens.into()
+                        }
+                        ```
+                    </script>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
                         ### Атрибутные макросы
 
                         ```rust
@@ -750,44 +872,6 @@
                         #[proc_macro_attribute]
                         pub fn route(attr: TokenStream, item: TokenStream) -> TokenStream {
                             ...
-                        }
-                        ```
-                        <!-- .element: class="fragment" data-fragment-index="1" -->
-                    </script>
-                </section>
-                
-                <section data-markdown>
-                    <script type="text/template">
-                        ### Зависимая кодогенерация
-                        
-                        ```rust
-                        #[derive(FieldName)]
-                        struct Record {
-                            start: DateTime<Local>,
-                            activity: Duration,
-                            text: String,
-                        }
-                        ```
-                        
-                        ```rust
-                        enum RecordField {
-                            Start,
-                            Activity,
-                            Text,
-                        }
-
-                        impl RecordField {
-                            fn name(&self) -> &'static str {
-                                match *self {
-                                    RecordField::Start => "start",
-                                    RecordField::Activity => "activity",
-                                    RecordField::Text => "text",
-                                }
-                            }
-
-                            fn by_name(name: &str) -> Option<Self> {
-                                ...
-                            }
                         }
                         ```
                         <!-- .element: class="fragment" data-fragment-index="1" -->
