@@ -215,7 +215,7 @@
                         <small>
                         - **`item`** - [элемент](https://doc.rust-lang.org/stable/reference/items.html)
                         - **`block`** - [блок](https://doc.rust-lang.org/stable/reference/expressions/block-expr.html)
-                        - **`stmt`** - [инструкция](https://doc.rust-lang.org/stable/reference/statements.html)
+                        - **`stmt`** - [оператор](https://doc.rust-lang.org/stable/reference/statements.html)
                         - **`pat`** - [образец](https://doc.rust-lang.org/stable/reference/expressions/match-expr.html)
                         - **`expr`** - [выражение](https://doc.rust-lang.org/stable/reference/expressions.html)
                         - **`ty`** - [тип](https://doc.rust-lang.org/stable/reference/types.html)
@@ -281,6 +281,43 @@
                         ```
                         <sub>Только для связываний `let` и меток `loop`, но не для [элементов](https://doc.rust-lang.org/stable/reference/items.html)</sub>
                         <!-- .element: class="fragment" data-fragment-index="1" -->
+                    </script>
+                </section>
+                
+                <section>
+                    <h3>Что принимает макрос?</h3>
+                    <sub>Единственное нелистовое дерево токенов</sub>
+                    <br/>
+                    
+                    <sub class="fragment" data-fragment-index="1">Последовательность токенов:</sub>
+                    <pre class="fragment" data-fragment-index="1"><code data-trim contenteditable>
+                    a + b + (c + d[0]) + e
+                    </code></pre>
+                    
+                    <sub class="fragment" data-fragment-index="2">Представляется следующим деревом токенов:</sub>
+                    <pre class="fragment" data-fragment-index="2"><code class="hljs" data-trim contenteditable>
+                    «a» «+» «b» «+» «(   )» «+» «e»
+                              ╭────────┴──────────╮
+                               «c» «+» «d» «[   ]»
+                                            ╭─┴─╮
+                                             «0»
+                    </code></pre>
+                    
+                    <sub class="fragment" data-fragment-index="3"><sub><i>токены, заключенные в <code>(..)</code>, <code>[..]</code> или <code>{..}</code></i></sub></sub>
+                    <pre class="fragment" data-fragment-index="3"><code class="hlrs" data-trim contenteditable>
+                    mac!(..), mac![..], mac!{..}
+                    </code></pre>
+                </section>
+                
+                <section data-markdown>
+                    <script type="text/template">
+                        ### Во что разворачивается макрос?
+                        
+                        - Выражение
+                        - Образец
+                        - Ноль или больше элементов
+                        - Ноль или больше `impl`-элементов
+                        - Оператор
                     </script>
                 </section>
                 
