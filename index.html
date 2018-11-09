@@ -556,30 +556,6 @@
                 
                 <section data-markdown>
                     <textarea data-template>
-                        ### JSX-подобные шаблоны в **`yew`**
-
-                        ```html
-                        html! {
-                            <section class="todoapp",>
-                                <header class="header",>
-                                    <h1>{ "todos" }</h1>
-                                    { view_input(&model) }
-                                </header>
-                                <section class="main",>
-                                    <input class="toggle-all", type="checkbox",
-                                        checked=model.is_all_completed(),
-                                        onclick=|_| Msg::ToggleAll, />
-                                    { view_entries(&model) }
-                                </section>
-                            </section>
-                        }
-                        ```
-                        <small>Конструирует значение типа **`yew::Html<Model>`**.</small>
-                    </textarea>
-                </section>
-                
-                <section data-markdown>
-                    <textarea data-template>
                         ### Макрос **`assemble6502`**
 
                         ```rust
@@ -609,6 +585,41 @@
                         };
                         ```
                         <small>Создает массив байтов с машинными кодами.</small>
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### JSX-подобные шаблоны в **`yew`**
+
+                        ```html
+                        html! {
+                            <section class="todoapp",>
+                                <header class="header",>
+                                    <h1>{ "todos" }</h1>
+                                    { view_input(&model) }
+                                </header>
+                                <section class="main",>
+                                    <input class="toggle-all", type="checkbox",
+                                        checked=model.is_all_completed(),
+                                        onclick=|_| Msg::ToggleAll, />
+                                    { view_entries(&model) }
+                                </section>
+                            </section>
+                        }
+                        ```
+                        <small>Конструирует значение типа **`yew::Html<Model>`**.</small>
+                    </textarea>
+                </section>
+                
+                <section data-markdown>
+                    <textarea data-template>
+                        ### Правила следования
+                        
+                        - За [`expr`](https://doc.rust-lang.org/stable/reference/expressions.html) и [`stmt`](https://doc.rust-lang.org/stable/reference/statements.html) может следовать **`=> , ;`**
+                        - За [`pat`](https://doc.rust-lang.org/stable/reference/expressions/match-expr.html) может следовать **`=> , | = if in`**
+                        - За [`ty`](https://doc.rust-lang.org/stable/reference/types.html) и [`path`](https://doc.rust-lang.org/stable/reference/paths.html) может следовать **`=> , = | ; : > [ { as where`**
+                        - За другими может следовать любой токен
                     </textarea>
                 </section>
                 
