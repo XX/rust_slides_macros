@@ -44,6 +44,11 @@
                         ### 1. Расширение синтаксиса
                         
                         ```rust
+                        let nums = vec![1, 2, 3];
+                        let v = vec![42; 3];
+                        ```
+                        
+                        ```rust
                         let nums = {
                             let mut tmp = Vec::new();
                             tmp.push(1);
@@ -51,11 +56,6 @@
                             tmp.push(3);
                             tmp
                         };
-                        ```
-                        
-                        ```rust
-                        let nums = vec![1, 2, 3];
-                        let v = vec![42; 3];
                         ```
                         
                         Note:
@@ -197,6 +197,13 @@
                             ($($x:expr,)*) => (vec![$($x),*])
                         }
                         ```
+                        
+                        Правило макроса:
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
+                        ```
+                        ( matcher ) => { transcriber };
+                        ```
+                        <!-- .element: class="fragment" data-fragment-index="1" -->
                         
                         Note:
                         Макрос определяется с помощью ряда правил, которые представляют собой варианты сопоставления с образцом.
